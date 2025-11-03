@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  backend:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+    volumes:
+      - ./app:/app/app
+    
+  frontend:
+    image: python:3.11-slim
+    working_dir: /app
+    command: |
+      bash -c "pip install streamlit requests && 
+               streamlit run streamlit_app.py --server.address 0.0.0.0 --server.port 8501"
+    ports:
+      - "8501:8501"
+    volumes:
+      - .:/app
+    environment:
+      - BACKEND_URL=http://backend:8000
+    depends_on:
+      - backend
+
+networks:
+  default:
+    driver: bridge

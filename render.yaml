@@ -1,0 +1,20 @@
+# Render.com deployment configuration
+
+services:
+  - type: web
+    name: job-agent-backend
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: OPENAI_API_KEY
+        sync: false  # Set this manually in Render dashboard
+
+  - type: web
+    name: job-agent-frontend
+    runtime: python
+    buildCommand: pip install streamlit requests
+    startCommand: streamlit run streamlit_app.py --server.address 0.0.0.0 --server.port $PORT
+    envVars:
+      - key: BACKEND_URL
+        value: https://job-agent-backend.onrender.com  # Update with your backend URL
