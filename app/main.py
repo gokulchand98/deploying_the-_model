@@ -1,12 +1,39 @@
 """FastAPI backend exposing endpoints for the job-search agent."""
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Optional
 import asyncio
+import os
 
 from . import agent, db
 
-app = FastAPI(title="Job Search Agent API")
+# Create FastAPI app with Railway-compatible settings
+app = FastAPI(
+    title="Job Search Agent API",
+    description="End-to-end job search agent for Data Engineering, MLOps, and Cloud roles",
+    version="1.0.0"
+)
+
+# Add CORS middleware to allow Railway healthcheck and other domains
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # In production, be more restrictive
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Middleware to handle Railway healthcheck hostname
+@app.middleware("http")
+async def railway_healthcheck_middleware(request: Request, call_next):
+    """Allow Railway's healthcheck.railway.app hostname"""
+    response = await call_next(request)
+    
+    # Add headers for Railway compatibility
+    response.headers["X-Railway-Health"] = "ok"
+    
+    return response
 
 
 class SearchRequest(BaseModel):
@@ -194,17 +221,17 @@ async def api_send_notification(req: NotificationTestRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-# Health check endpoints (multiple paths for reliability)
+# Health check endpoints (Railway requires HTTP 200)
 @app.get("/")
 async def root():
     """Root endpoint"""
-    return {"message": "Job Search Agent API", "status": "running", "health": "/api/health"}
+    return {"message": "Job Search Agent API", "status": "running", "health": "/health"}
 
 
-@app.get("/health")
-async def simple_health():
-    """Simple health check"""
-    return {"status": "ok"}
+@app.get("/health", status_code=200)
+async def health_check():
+    """Railway health check endpoint - must return HTTP 200"""
+    return {"status": "ok", "service": "job-search-agent"}
 
 
 @app.get("/api/health")
