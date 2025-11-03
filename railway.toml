@@ -1,0 +1,14 @@
+# Railway deployment configuration
+# This file is automatically detected by Railway
+
+[build]
+builder = "dockerfile"
+
+[deploy]
+healthcheckPath = "/api/health"
+healthcheckTimeout = 300
+restartPolicyType = "on_failure"
+
+[environments.production.variables]
+# Set these in Railway dashboard:
+# OPENAI_API_KEY = "your_api_key_here"

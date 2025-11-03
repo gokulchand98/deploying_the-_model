@@ -24,17 +24,31 @@ PRIORITY_KEYWORDS = {
 
 def _score_job_relevance(job_title: str, job_description: str) -> int:
     """Score job relevance based on priority keywords. Higher score = more relevant."""
-    score = 0
-    title_lower = job_title.lower()
-    desc_lower = job_description.lower()
+    from .rubrics import rubrics
     
-    # High priority matches in title (worth more)
-    for category, keywords in PRIORITY_KEYWORDS.items():
-        for keyword in keywords:
-            if keyword in title_lower:
-                score += 10
-            elif keyword in desc_lower:
-                score += 3
+    # Create a temporary job dict for scoring
+    job = {
+        'title': job_title,
+        'description': job_description,
+        'company': '',
+        'location': ''
+    }
+    
+    # Use rubrics-based scoring
+    score = rubrics.get_job_score(job)
+    
+    # Fallback to original scoring if rubrics score is too low
+    if score < 3:
+        title_lower = job_title.lower()
+        desc_lower = job_description.lower()
+        
+        # High priority matches in title (worth more)
+        for category, keywords in PRIORITY_KEYWORDS.items():
+            for keyword in keywords:
+                if keyword in title_lower:
+                    score += 10
+                elif keyword in desc_lower:
+                    score += 3
     
     return score
 
@@ -74,29 +88,17 @@ async def search_jobs(query: str, limit: int = 10) -> List[Dict]:
 
 
 def generate_cover_letter_sync(resume_text: str, job: Dict, openai_client=None) -> str:
-    """Generate a cover letter synchronously, specialized for DE/MLOps/Cloud roles.
+    """Generate a cover letter synchronously using customizable rubrics.
 
-    Uses OpenAI ChatCompletion with updated client library. Falls back to template if not available.
+    Uses OpenAI ChatCompletion with rubrics-based prompts. Falls back to template if not available.
     """
+    from .rubrics import rubrics
+    
+    # Use rubrics to generate the prompt
+    prompt = rubrics.get_cover_letter_prompt(job, resume_text)
+    
     job_title = job.get('title', 'Unknown Position')
     company = job.get('company', 'the Company')
-    description = job.get('description', '')[:1200]  # More context for technical roles
-    
-    # Enhanced prompt for technical roles
-    prompt = (
-        f"You are a professional cover letter writer specializing in data engineering, MLOps, and cloud engineering roles. "
-        f"Write a compelling 3-paragraph cover letter for this technical position:\n\n"
-        f"Job Title: {job_title}\nCompany: {company}\nLocation: {job.get('location', 'Remote')}\n\n"
-        f"Job Description:\n{description}\n\n"
-        f"Candidate Background:\n{resume_text[:2000]}\n\n"
-        f"Instructions:\n"
-        f"- Paragraph 1: Strong opening expressing interest and briefly mentioning most relevant technical skills\n"
-        f"- Paragraph 2: Highlight 2-3 specific technical achievements or projects that align with the job requirements (focus on data pipelines, cloud platforms, ML systems, etc.)\n"
-        f"- Paragraph 3: Professional closing with enthusiasm and call to action\n"
-        f"- Use technical terminology appropriately but keep it accessible\n"
-        f"- Be specific about technologies mentioned in the job description\n"
-        f"- Keep it concise but impactful\n"
-    )
 
     # Try OpenAI with modern client
     if OPENAI_API_KEY:
@@ -129,7 +131,7 @@ def generate_cover_letter_sync(resume_text: str, job: Dict, openai_client=None) 
         except Exception as e:
             print(f"OpenAI API error: {e}")
 
-    # Enhanced template for technical roles
+    # Enhanced template for technical roles (fallback)
     template = (
         f"Dear Hiring Manager at {company},\n\n"
         f"I am excited to apply for the {job_title} position. With extensive experience in data engineering, cloud platforms, and ML operations, "

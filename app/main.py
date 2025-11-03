@@ -74,6 +74,52 @@ async def api_list_applications():
     return {"applications": db.list_applications()}
 
 
+# Rubrics management endpoints
+class RubricsUpdateRequest(BaseModel):
+    instructions: str
+
+
+@app.get("/api/rubrics")
+async def api_get_rubrics():
+    """Get current agent behavior rubrics"""
+    try:
+        from . import rubrics as r
+        return {
+            "job_scoring": r.rubrics.job_scoring.__dict__,
+            "cover_letter": r.rubrics.cover_letter.__dict__,
+            "application": r.rubrics.application.__dict__
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/rubrics/update")
+async def api_update_rubrics(req: RubricsUpdateRequest):
+    """Update agent behavior based on natural language instructions"""
+    try:
+        from . import rubrics as r
+        result = r.rubrics.update_rubrics_from_instructions(req.instructions)
+        return {"message": result}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/jobs/score")
+async def api_score_job(job: dict):
+    """Score a specific job based on current rubrics"""
+    try:
+        from . import rubrics as r
+        score = r.rubrics.get_job_score(job)
+        should_apply = r.rubrics.should_auto_apply(job, score)
+        return {
+            "score": score,
+            "should_auto_apply": should_apply,
+            "meets_threshold": score >= r.rubrics.job_scoring.min_score_threshold
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # Simple health
 @app.get("/api/health")
 async def health():

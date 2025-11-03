@@ -119,3 +119,83 @@ if st.button("📋 Show My Applications", type="secondary"):
             st.error("Failed to fetch applications")
     except requests.exceptions.RequestException as e:
         st.error(f"Connection error: {e}")
+
+# Agent Configuration Section
+st.header("🤖 Agent Behavior Configuration")
+
+with st.expander("📋 View Current Rubrics"):
+    if st.button("Refresh Rubrics"):
+        try:
+            r = requests.get(f"{BACKEND}/api/rubrics")
+            if r.status_code == 200:
+                rubrics_data = r.json()
+                st.json(rubrics_data)
+            else:
+                st.error("Failed to fetch rubrics")
+        except requests.exceptions.RequestException as e:
+            st.error(f"Connection error: {e}")
+
+with st.expander("✏️ Update Agent Instructions"):
+    st.write("**Customize how your agent behaves by providing natural language instructions:**")
+    
+    st.write("**Examples:**")
+    st.code("""
+• "Prioritize senior roles over junior roles"
+• "Avoid companies with less than 100 employees"  
+• "Focus on remote-first companies"
+• "Prefer jobs mentioning Kubernetes and Docker"
+• "Make cover letters more casual and enthusiastic"
+• "Only apply to jobs with salary > $150k"
+    """)
+    
+    custom_instructions = st.text_area(
+        "Your Instructions", 
+        placeholder="e.g., 'Prioritize jobs at startups with strong engineering culture. Focus on roles with equity compensation. Make cover letters highlight my startup experience.'",
+        height=150
+    )
+    
+    if st.button("🔄 Update Agent Behavior") and custom_instructions:
+        with st.spinner("Updating agent behavior..."):
+            try:
+                r = requests.post(f"{BACKEND}/api/rubrics/update", 
+                                json={"instructions": custom_instructions})
+                if r.status_code == 200:
+                    st.success("✅ Agent behavior updated!")
+                    st.info(r.json().get('message'))
+                else:
+                    st.error(f"Update failed: {r.text}")
+            except requests.exceptions.RequestException as e:
+                st.error(f"Connection error: {e}")
+
+with st.expander("🧪 Test Job Scoring"):
+    st.write("**Test how your agent would score a specific job:**")
+    
+    test_title = st.text_input("Job Title", placeholder="Senior Data Engineer")
+    test_company = st.text_input("Company", placeholder="Netflix")  
+    test_location = st.text_input("Location", placeholder="Remote")
+    test_description = st.text_area("Job Description", placeholder="Build data pipelines using Spark and Kafka...", height=100)
+    
+    if st.button("🔍 Score This Job") and test_title:
+        test_job = {
+            "title": test_title,
+            "company": test_company,
+            "location": test_location,
+            "description": test_description
+        }
+        
+        try:
+            r = requests.post(f"{BACKEND}/api/jobs/score", json=test_job)
+            if r.status_code == 200:
+                score_data = r.json()
+                col1, col2, col3 = st.columns(3)
+                
+                with col1:
+                    st.metric("📊 Score", score_data['score'])
+                with col2:
+                    st.metric("✅ Meets Threshold", "Yes" if score_data['meets_threshold'] else "No")
+                with col3:
+                    st.metric("🤖 Auto-Apply", "Yes" if score_data['should_auto_apply'] else "No")
+            else:
+                st.error(f"Scoring failed: {r.text}")
+        except requests.exceptions.RequestException as e:
+            st.error(f"Connection error: {e}")

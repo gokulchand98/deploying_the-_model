@@ -1,0 +1,98 @@
+{
+  "job_scoring": {
+    "title_keywords": {
+      "data engineer": 15,
+      "data engineering": 15,
+      "senior data engineer": 20,
+      "lead data engineer": 18,
+      "staff data engineer": 22,
+      "principal data engineer": 25,
+      "mlops": 18,
+      "ml engineer": 16,
+      "machine learning engineer": 16,
+      "ml platform": 14,
+      "ai engineer": 14,
+      "cloud engineer": 16,
+      "devops engineer": 14,
+      "platform engineer": 15,
+      "infrastructure engineer": 13,
+      "site reliability engineer": 14,
+      "sre": 14
+    },
+    "description_keywords": {
+      "apache spark": 8,
+      "kafka": 7,
+      "airflow": 7,
+      "kubernetes": 8,
+      "docker": 6,
+      "terraform": 7,
+      "aws": 6,
+      "azure": 6,
+      "gcp": 6,
+      "databricks": 8,
+      "snowflake": 7,
+      "dbt": 6,
+      "mlflow": 7,
+      "kubeflow": 8,
+      "sagemaker": 6,
+      "pytorch": 5,
+      "tensorflow": 5,
+      "python": 4,
+      "scala": 5,
+      "java": 4,
+      "sql": 3,
+      "ci/cd": 5,
+      "iac": 6,
+      "infrastructure as code": 6,
+      "data pipeline": 6,
+      "etl": 5,
+      "streaming": 6
+    },
+    "company_preferences": {
+      "netflix": 5,
+      "spotify": 5,
+      "uber": 4,
+      "meta": 4,
+      "google": 5,
+      "microsoft": 4,
+      "amazon": 3
+    },
+    "location_preferences": {
+      "remote": 8,
+      "hybrid": 5,
+      "san francisco": 3,
+      "new york": 3,
+      "seattle": 3,
+      "austin": 4
+    },
+    "min_score_threshold": 8
+  },
+  "cover_letter": {
+    "tone": "professional",
+    "length": "medium",
+    "focus_areas": [
+      "technical_skills",
+      "achievements",
+      "specific_experience"
+    ],
+    "custom_instructions": "Emphasize hands-on experience with data pipelines, cloud platforms, and ML systems. Mention specific technologies from the job description. Show quantifiable impact where possible.",
+    "signature_style": "professional"
+  },
+  "application": {
+    "auto_apply_score_threshold": 25,
+    "skip_companies": [
+      "companies_with_bad_culture"
+    ],
+    "required_keywords": [
+      "data",
+      "engineering",
+      "cloud",
+      "ml"
+    ],
+    "blacklist_keywords": [
+      "unpaid",
+      "internship",
+      "entry level"
+    ]
+  }
+}
