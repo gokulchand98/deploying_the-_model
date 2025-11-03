@@ -13,9 +13,37 @@ with st.sidebar:
     resume_text = st.text_area("Paste your resume / technical summary here", height=300, 
                               placeholder="Include your experience with data pipelines, cloud platforms, ML systems, etc.")
     
-    st.header("🔧 Configuration")
+    st.header("� Notification Settings")
+    enable_notifications = st.checkbox("Enable SMS/Call Notifications", help="Get notified about high-scoring job matches")
+    
+    if enable_notifications:
+        # Check notification status
+        try:
+            status_resp = requests.get(f"{BACKEND}/api/notifications/status")
+            if status_resp.status_code == 200:
+                status = status_resp.json()
+                if status["configured"]:
+                    st.success("✅ Notifications configured!")
+                    st.info(f"📱 SMS threshold: {status['sms_threshold']}+ points")
+                    st.info(f"📞 Call threshold: {status['call_threshold']}+ points")
+                else:
+                    st.warning("⚠️ Configure Twilio credentials in environment variables")
+            else:
+                st.error("Failed to check notification status")
+        except:
+            st.error("Backend connection error")
+    
+    st.header("�🔧 Configuration")
     st.write("Set `BACKEND_URL` env to point to running backend if needed.")
     st.write("Set `OPENAI_API_KEY` env for AI-generated cover letters.")
+    if enable_notifications:
+        st.write("Set Twilio credentials for notifications:")
+        st.code("""
+TWILIO_ACCOUNT_SID=your_account_sid
+TWILIO_AUTH_TOKEN=your_auth_token  
+TWILIO_PHONE_NUMBER=+1234567890
+YOUR_PHONE_NUMBER=+1234567890
+        """)
 
 # Job search with predefined options
 st.header("🔍 Find Your Next Role")
@@ -45,7 +73,13 @@ with col2:
 if st.button("🔍 Search Jobs", type="primary") and query:
     with st.spinner("Searching for DE/MLOps/Cloud opportunities..."):
         try:
-            resp = requests.post(f"{BACKEND}/api/search", json={"query": query, "limit": 15})
+            search_payload = {
+                "query": query, 
+                "limit": 15,
+                "resume_text": resume_text if enable_notifications else "",
+                "enable_notifications": enable_notifications
+            }
+            resp = requests.post(f"{BACKEND}/api/search", json=search_payload)
             if resp.status_code == 200:
                 data = resp.json()
                 jobs = data.get("jobs", [])
@@ -53,9 +87,21 @@ if st.button("🔍 Search Jobs", type="primary") and query:
                 
                 for j in jobs:
                     relevance = j.get('relevance_score', 0)
-                    priority_badge = "🔥 HIGH PRIORITY" if relevance >= 10 else "⭐ RELEVANT" if relevance >= 3 else ""
+                    resume_match = j.get('resume_match_score', 0)
+                    notification_sent = j.get('notification_sent', {})
                     
-                    with st.expander(f"{priority_badge} {j.get('title')} @ {j.get('company')} (Score: {relevance})"):
+                    # Enhanced priority badges
+                    priority_badge = "🔥 HIGH PRIORITY" if relevance >= 10 else "⭐ RELEVANT" if relevance >= 3 else ""
+                    if notification_sent.get('call_made'):
+                        priority_badge += " 📞 CALLED"
+                    elif notification_sent.get('sms_sent'):
+                        priority_badge += " 📱 SMS SENT"
+                    
+                    score_display = f"Job: {relevance}"
+                    if resume_match > 0:
+                        score_display += f" | Resume: {resume_match}"
+                    
+                    with st.expander(f"{priority_badge} {j.get('title')} @ {j.get('company')} ({score_display})"):
                         col1, col2 = st.columns([2, 1])
                         
                         with col1:
@@ -199,3 +245,48 @@ with st.expander("🧪 Test Job Scoring"):
                 st.error(f"Scoring failed: {r.text}")
         except requests.exceptions.RequestException as e:
             st.error(f"Connection error: {e}")
+
+with st.expander("📱 Test Notifications"):
+    st.write("**Test your SMS and phone call setup:**")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        if st.button("🧪 Test All Notifications"):
+            with st.spinner("Testing notifications..."):
+                try:
+                    r = requests.post(f"{BACKEND}/api/notifications/test")
+                    if r.status_code == 200:
+                        results = r.json()["test_results"]
+                        if results["configured"]:
+                            st.success("✅ Twilio configured")
+                            if results["sms_test"]:
+                                st.success("📱 SMS test sent!")
+                            else:
+                                st.error("❌ SMS test failed")
+                            if results["call_test"]:
+                                st.success("📞 Call test initiated!")
+                            else:
+                                st.error("❌ Call test failed")
+                        else:
+                            st.warning("⚠️ Notifications not configured")
+                    else:
+                        st.error("Test failed")
+                except requests.exceptions.RequestException as e:
+                    st.error(f"Connection error: {e}")
+    
+    with col2:
+        # Manual notification test
+        test_message = st.text_input("Custom Test Message", placeholder="Test message from job agent")
+        notification_type = st.selectbox("Notification Type", ["sms", "call"])
+        
+        if st.button("📤 Send Test") and test_message:
+            try:
+                r = requests.post(f"{BACKEND}/api/notifications/send", 
+                                json={"message": test_message, "type": notification_type})
+                if r.status_code == 200 and r.json()["success"]:
+                    st.success(f"✅ {notification_type.upper()} sent!")
+                else:
+                    st.error("❌ Send failed")
+            except requests.exceptions.RequestException as e:
+                st.error(f"Connection error: {e}")

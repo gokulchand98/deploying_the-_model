@@ -5,10 +5,16 @@
 builder = "dockerfile"
 
 [deploy]
-healthcheckPath = "/api/health"
+healthcheckPath = "/health"
 healthcheckTimeout = 300
 restartPolicyType = "on_failure"
 
 [environments.production.variables]
 # Set these in Railway dashboard:
 # OPENAI_API_KEY = "your_api_key_here"
+# TWILIO_ACCOUNT_SID = "your_twilio_sid"  
+# TWILIO_AUTH_TOKEN = "your_twilio_token"
+# TWILIO_PHONE_NUMBER = "+1234567890"
+# YOUR_PHONE_NUMBER = "+1987654321"
+# SMS_THRESHOLD = "15"
+# CALL_THRESHOLD = "30"

@@ -1,12 +1,21 @@
 #!/bin/bash
-# Railway startup script
+set -e
 
 echo "🚀 Starting Job Search Agent..."
-echo "Environment: $NODE_ENV"
-echo "Port: ${PORT:-8000}"
 
-# Create config directory if it doesn't exist
+# Ensure proper permissions and directories
 mkdir -p /app/config
+chmod 755 /app/config
 
-# Start the FastAPI application
-exec uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000} --log-level info
+# Export environment variables with defaults
+export PORT=${PORT:-8000}
+export OPENAI_API_KEY=${OPENAI_API_KEY:-""}
+
+echo "📊 Environment setup:"
+echo "  - Port: $PORT"
+echo "  - OpenAI configured: $([ -n "$OPENAI_API_KEY" ] && echo "Yes" || echo "No")"
+echo "  - Twilio configured: $([ -n "$TWILIO_ACCOUNT_SID" ] && echo "Yes" || echo "No")"
+
+# Start the application
+echo "🎯 Starting uvicorn server..."
+exec uvicorn app.main:app --host 0.0.0.0 --port $PORT --log-level info

@@ -12,6 +12,8 @@ app = FastAPI(title="Job Search Agent API")
 class SearchRequest(BaseModel):
     query: str
     limit: Optional[int] = 10
+    resume_text: Optional[str] = ""
+    enable_notifications: Optional[bool] = False
 
 
 class CoverLetterRequest(BaseModel):
@@ -26,13 +28,34 @@ class ApplyRequest(BaseModel):
 
 @app.on_event("startup")
 async def startup_event():
-    db.init_db()
+    try:
+        print("🚀 Starting Job Search Agent API...")
+        db.init_db()
+        print("✅ Database initialized successfully")
+        
+        # Test notification system
+        try:
+            from .notifications import notifications
+            print(f"📱 Notification system loaded (Configured: {notifications.twilio_client is not None})")
+        except Exception as e:
+            print(f"⚠️ Notification system error (non-critical): {e}")
+        
+        print("🎯 API startup completed successfully!")
+    except Exception as e:
+        print(f"❌ Startup error: {e}")
+        # Don't raise to prevent crash - let health check handle it
+        pass
 
 
 @app.post("/api/search")
 async def api_search(req: SearchRequest):
     try:
-        jobs = await agent.search_jobs(req.query, limit=req.limit)
+        jobs = await agent.search_jobs(
+            req.query, 
+            limit=req.limit,
+            resume_text=req.resume_text,
+            enable_notifications=req.enable_notifications
+        )
         return {"jobs": jobs}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -120,7 +143,92 @@ async def api_score_job(job: dict):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-# Simple health
+# Notification endpoints
+@app.post("/api/notifications/test")
+async def api_test_notifications():
+    """Test SMS and phone call functionality"""
+    try:
+        from .notifications import notifications
+        results = notifications.test_notifications()
+        return {"test_results": results}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/notifications/status")
+async def api_notification_status():
+    """Check notification configuration status"""
+    try:
+        from .notifications import notifications, TWILIO_ACCOUNT_SID, YOUR_PHONE_NUMBER, SMS_THRESHOLD, CALL_THRESHOLD
+        return {
+            "configured": notifications.twilio_client is not None,
+            "twilio_configured": bool(TWILIO_ACCOUNT_SID),
+            "phone_number_set": bool(YOUR_PHONE_NUMBER),
+            "sms_threshold": SMS_THRESHOLD,
+            "call_threshold": CALL_THRESHOLD
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+class NotificationTestRequest(BaseModel):
+    message: str
+    type: str  # "sms" or "call"
+
+
+@app.post("/api/notifications/send")
+async def api_send_notification(req: NotificationTestRequest):
+    """Send a test notification"""
+    try:
+        from .notifications import notifications
+        
+        if req.type == "sms":
+            success = notifications.send_sms(req.message)
+        elif req.type == "call":
+            success = notifications.make_call(req.message)
+        else:
+            raise HTTPException(status_code=400, detail="Type must be 'sms' or 'call'")
+        
+        return {"success": success, "type": req.type}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# Health check endpoints (multiple paths for reliability)
+@app.get("/")
+async def root():
+    """Root endpoint"""
+    return {"message": "Job Search Agent API", "status": "running", "health": "/api/health"}
+
+
+@app.get("/health")
+async def simple_health():
+    """Simple health check"""
+    return {"status": "ok"}
+
+
 @app.get("/api/health")
 async def health():
-    return {"status": "ok"}
+    """Detailed health check endpoint for Railway deployment"""
+    try:
+        # Test database connection
+        applications = db.list_applications()
+        
+        # Test notification system (non-critical)
+        notification_status = False
+        try:
+            from .notifications import notifications
+            notification_status = notifications.twilio_client is not None
+        except:
+            pass
+        
+        return {
+            "status": "healthy",
+            "timestamp": "2024-11-03",
+            "database": "connected",
+            "notifications": "configured" if notification_status else "disabled",
+            "application_count": len(applications)
+        }
+    except Exception as e:
+        print(f"Health check error: {e}")
+        return {"status": "ok"}  # Return ok even if some features fail

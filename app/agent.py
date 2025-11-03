@@ -53,10 +53,11 @@ def _score_job_relevance(job_title: str, job_description: str) -> int:
     return score
 
 
-async def search_jobs(query: str, limit: int = 10) -> List[Dict]:
+async def search_jobs(query: str, limit: int = 10, resume_text: str = "", enable_notifications: bool = False) -> List[Dict]:
     """Search jobs using Remotive public API, prioritizing DE/MLOps/Cloud roles.
 
     Returns a list of normalized job dicts, sorted by relevance to target job types.
+    Optionally sends notifications for high-scoring jobs.
     """
     # If no specific query, use our priority terms
     if not query or query.strip() == "":
@@ -80,6 +81,19 @@ async def search_jobs(query: str, limit: int = 10) -> List[Dict]:
         }
         # Add relevance score
         job["relevance_score"] = _score_job_relevance(job.get("title", ""), job.get("description", ""))
+        
+        # Add resume match score and send notifications if enabled
+        if resume_text:
+            from .notifications import calculate_resume_match_score, notifications
+            job["resume_match_score"] = calculate_resume_match_score(job, resume_text)
+            
+            # Send notifications for high-scoring jobs
+            if enable_notifications and (job["relevance_score"] >= 15 or job["resume_match_score"] >= 20):
+                notification_result = notifications.notify_job_match(
+                    job, job["relevance_score"], job["resume_match_score"]
+                )
+                job["notification_sent"] = notification_result
+        
         jobs.append(job)
     
     # Sort by relevance score (highest first) and return top results
