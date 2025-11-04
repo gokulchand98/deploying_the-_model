@@ -55,22 +55,45 @@ class ApplyRequest(BaseModel):
 
 @app.on_event("startup")
 async def startup_event():
+    print("=" * 50)
+    print("🚀 STARTING JOB SEARCH AGENT API")
+    print("=" * 50)
+    
     try:
-        print("🚀 Starting Job Search Agent API...")
+        print("Step 1: Basic imports check...")
+        import os
+        import sys
+        print(f"✅ Python version: {sys.version}")
+        print(f"✅ Working directory: {os.getcwd()}")
+        print(f"✅ PORT from env: {os.environ.get('PORT', 'not set')}")
+        
+        print("Step 2: Database initialization...")
         db.init_db()
         print("✅ Database initialized successfully")
         
-        # Test notification system
+        print("Step 3: Testing basic functionality...")
+        apps = db.list_applications()
+        print(f"✅ Database connection works, found {len(apps)} applications")
+        
+        print("Step 4: Loading optional modules...")
+        # Test notification system (non-critical)
         try:
             from .notifications import notifications
-            print(f"📱 Notification system loaded (Configured: {notifications.twilio_client is not None})")
+            print(f"✅ Notification system loaded (Configured: {notifications.twilio_client is not None})")
         except Exception as e:
             print(f"⚠️ Notification system error (non-critical): {e}")
         
-        print("🎯 API startup completed successfully!")
+        print("=" * 50)
+        print("🎯 API STARTUP COMPLETED SUCCESSFULLY!")
+        print("=" * 50)
+        
     except Exception as e:
-        print(f"❌ Startup error: {e}")
-        # Don't raise to prevent crash - let health check handle it
+        print("=" * 50)
+        print(f"❌ CRITICAL STARTUP ERROR: {e}")
+        print("=" * 50)
+        import traceback
+        traceback.print_exc()
+        # Continue anyway to allow health check
         pass
 
 
@@ -228,10 +251,16 @@ async def root():
     return {"message": "Job Search Agent API", "status": "running", "health": "/health"}
 
 
-@app.get("/health", status_code=200)
+@app.get("/health")
 async def health_check():
-    """Railway health check endpoint - must return HTTP 200"""
-    return {"status": "ok", "service": "job-search-agent"}
+    """Railway health check endpoint - minimal and reliable"""
+    return {"status": "ok"}
+
+
+@app.get("/ping")
+async def ping():
+    """Super simple ping endpoint"""
+    return "pong"
 
 
 @app.get("/api/health")
