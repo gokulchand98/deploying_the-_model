@@ -130,6 +130,33 @@ async def api_search_priority(limit: int = 15):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.post("/api/search/sources")
+async def api_search_with_sources(req: SearchRequest):
+    """Enhanced search endpoint that shows job distribution by source."""
+    try:
+        jobs = await agent.search_jobs(
+            req.query, 
+            limit=req.limit,
+            resume_text=req.resume_text,
+            enable_notifications=req.enable_notifications
+        )
+        
+        # Count jobs by source
+        source_counts = {}
+        for job in jobs:
+            source = job.get("source", "Unknown")
+            source_counts[source] = source_counts.get(source, 0) + 1
+        
+        return {
+            "jobs": jobs,
+            "total_found": len(jobs),
+            "sources": source_counts,
+            "sources_used": list(source_counts.keys())
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.post("/api/cover_letter")
 async def api_cover_letter(req: CoverLetterRequest):
     try:

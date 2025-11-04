@@ -107,6 +107,26 @@
             font-weight: bold;
             float: right;
         }
+        .job-source {
+            background-color: #f39c12;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 11px;
+            font-weight: bold;
+            margin-left: 10px;
+            display: inline-block;
+        }
+        .source-remotive { background-color: #3498db; }
+        .source-dice { background-color: #e74c3c; }
+        .source-indeed { background-color: #2c5aa0; }
+        .source-linkedin { background-color: #0077b5; }
+        .sources-summary {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
         .loading {
             text-align: center;
             color: #7f8c8d;
@@ -225,10 +245,10 @@
                 return;
             }
 
-            showStatus(`Searching for ${limit} ${query} jobs...`, 'info');
+            showStatus(`Searching ${limit} ${query} jobs from multiple sources (Dice, LinkedIn, Indeed, Remotive)...`, 'info');
             
             try {
-                const response = await fetch(`${API_BASE}/api/search`, {
+                const response = await fetch(`${API_BASE}/api/search/sources`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -246,8 +266,8 @@
                 const data = await response.json();
                 
                 if (data.jobs && data.jobs.length > 0) {
-                    displayJobs(data.jobs);
-                    showStatus(`✅ Found ${data.jobs.length} jobs for "${query}"`, 'success');
+                    displayJobs(data.jobs, data.sources);
+                    showStatus(`✅ Found ${data.jobs.length} jobs for "${query}" from: ${data.sources_used.join(', ')}`, 'success');
                 } else {
                     showStatus(`No jobs found for "${query}". Try a different search term.`, 'error');
                     clearResults();
@@ -258,10 +278,19 @@
             }
         }
 
-        function displayJobs(jobs) {
+        function displayJobs(jobs, sources = {}) {
             const resultsDiv = document.getElementById('results');
             
             let html = `<h2>Found ${jobs.length} Jobs</h2>`;
+            
+            // Show sources summary if available
+            if (sources && Object.keys(sources).length > 0) {
+                html += '<div class="sources-summary"><h3>📊 Jobs by Source:</h3>';
+                for (const [source, count] of Object.entries(sources)) {
+                    html += `<span class="job-source source-${source.toLowerCase()}">${source}: ${count} jobs</span> `;
+                }
+                html += '</div>';
+            }
             
             jobs.forEach((job, index) => {
                 // Clean up the description by removing HTML tags and limiting length
@@ -270,10 +299,14 @@
                     description = description.substring(0, 500) + '...';
                 }
                 
+                // Get source class for styling
+                const source = job.source || 'Unknown';
+                const sourceClass = `source-${source.toLowerCase()}`;
+                
                 html += `
                     <div class="job-card">
                         <div class="relevance-score">Score: ${job.relevance_score}</div>
-                        <div class="job-title">${job.title}</div>
+                        <div class="job-title">${job.title} <span class="job-source ${sourceClass}">${source}</span></div>
                         <div class="job-company">🏢 ${job.company}</div>
                         <div class="job-location">📍 ${job.location}</div>
                         <div class="job-description">${description}</div>
