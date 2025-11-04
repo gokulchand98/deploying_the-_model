@@ -115,9 +115,16 @@ async def api_search(req: SearchRequest):
 async def api_search_priority(limit: int = 15):
     """Quick endpoint to get high-priority DE/MLOps/Cloud jobs."""
     try:
-        jobs = await agent.search_jobs("", limit=limit)  # Uses default priority search
-        # Filter only high-relevance jobs
-        priority_jobs = [j for j in jobs if j.get("relevance_score", 0) >= 3]
+        # Search for data engineering, MLOps, and cloud roles specifically
+        jobs = await agent.search_jobs("data engineer OR machine learning OR cloud engineer OR MLOps", limit=limit)
+        
+        # Filter high-relevance jobs (lower threshold to ensure we get results)
+        priority_jobs = [j for j in jobs if j.get("relevance_score", 0) >= 1]
+        
+        # If still no jobs, return all jobs found
+        if not priority_jobs and jobs:
+            priority_jobs = jobs[:limit]
+        
         return {"jobs": priority_jobs, "total_found": len(jobs)}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
