@@ -3,9 +3,17 @@ set -e
 
 echo "🚀 Starting Job Search Agent..."
 
-# Ensure proper permissions and directories
-mkdir -p /app/config
-chmod 755 /app/config
+# Ensure proper permissions and directories (Docker vs local)
+if [ -w "/app" ]; then
+    # Running in Docker container
+    mkdir -p /app/config
+    chmod 755 /app/config
+    echo "✅ Docker environment detected"
+else
+    # Running locally
+    mkdir -p ./config
+    echo "✅ Local environment detected"
+fi
 
 # Railway injects PORT - must use exactly as provided
 if [ -z "$PORT" ]; then
@@ -21,8 +29,14 @@ echo "  - Host: 0.0.0.0 (required for Railway)"
 echo "  - OpenAI configured: $([ -n "$OPENAI_API_KEY" ] && echo "Yes" || echo "No")"
 echo "  - Twilio configured: $([ -n "$TWILIO_ACCOUNT_SID" ] && echo "Yes" || echo "No")"
 
-# Start the application with Railway-compatible settings
-echo "🎯 Starting uvicorn server for Railway deployment..."
+# Ensure we're starting FastAPI, not Streamlit
+echo "🎯 Starting FastAPI uvicorn server for Railway deployment..."
+echo "Command: uvicorn app.main:app --host 0.0.0.0 --port $PORT"
+
+# Unset any Streamlit environment variables that might interfere
+unset STREAMLIT_SERVER_PORT
+unset STREAMLIT_SERVER_ADDRESS
+
 exec uvicorn app.main:app \
     --host 0.0.0.0 \
     --port $PORT \

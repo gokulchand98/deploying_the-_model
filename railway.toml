@@ -5,6 +5,7 @@
 builder = "dockerfile"
 
 [deploy]
+startCommand = "./start.sh"
 healthcheckPath = "/ping"
 healthcheckTimeout = 300
 restartPolicyType = "on_failure"

@@ -1,0 +1,7 @@
+# Railway ignore file - prevents auto-detection of unwanted files
+streamlit_app.py
+*.streamlit/
+.streamlit/
+
+# Only use our Dockerfile, not auto-detection
+# Railway should use our explicit configuration
