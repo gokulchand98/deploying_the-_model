@@ -70,7 +70,16 @@ async def search_jobs(query: str, limit: int = 10, resume_text: str = "", enable
         data = r.json()
 
     jobs = []
-    for item in data.get("jobs", [])[:limit*2]:  # Get extra jobs to filter/sort
+    for item in data.get("jobs", [])[:limit*3]:  # Get extra jobs to filter/sort (more because we're filtering by location)
+        location = item.get("candidate_required_location", "").lower()
+        
+        # Filter for United States jobs only
+        us_indicators = ["usa", "united states", "us", "america", "american", "remote us", "us remote", 
+                        "remote usa", "usa remote", "remote (us)", "remote - us", "us only", "usa only"]
+        
+        if not any(indicator in location for indicator in us_indicators):
+            continue  # Skip non-US jobs
+        
         job = {
             "id": item.get("id"),
             "title": item.get("title"),

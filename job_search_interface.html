@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Job Search Agent</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .search-form {
+            margin-bottom: 30px;
+            padding: 20px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #34495e;
+        }
+        input, select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        .results {
+            margin-top: 20px;
+        }
+        .job-card {
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            background-color: white;
+        }
+        .job-title {
+            color: #2c3e50;
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .job-company {
+            color: #7f8c8d;
+            font-size: 16px;
+            margin-bottom: 5px;
+        }
+        .job-location {
+            color: #95a5a6;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+        .job-description {
+            margin-top: 10px;
+            line-height: 1.6;
+        }
+        .job-url {
+            margin-top: 10px;
+        }
+        .job-url a {
+            color: #3498db;
+            text-decoration: none;
+        }
+        .job-url a:hover {
+            text-decoration: underline;
+        }
+        .relevance-score {
+            background-color: #e8f6f3;
+            color: #27ae60;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+            float: right;
+        }
+        .loading {
+            text-align: center;
+            color: #7f8c8d;
+            font-style: italic;
+        }
+        .error {
+            background-color: #fadbd8;
+            color: #e74c3c;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .success {
+            background-color: #d5f4e6;
+            color: #27ae60;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .quick-searches {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+        .quick-search-btn {
+            background-color: #95a5a6;
+            padding: 8px 16px;
+            font-size: 14px;
+        }
+        .quick-search-btn:hover {
+            background-color: #7f8c8d;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🤖 Gokulchand Your Agent</h1>
+        <p style="text-align: center; color: #7f8c8d; margin-bottom: 30px; font-size: 16px;">
+            🇺🇸 Specialized Job Search for Data Engineering, MLOps & Cloud Engineering (US Only)
+        </p>
+        
+        <div class="search-form">
+            <div class="form-group">
+                <label for="searchQuery">Job Search Query:</label>
+                <input type="text" id="searchQuery" placeholder="e.g., data engineer, MLOps, cloud engineer" value="data engineer">
+            </div>
+            
+            <div class="form-group">
+                <label for="jobLimit">Number of Jobs:</label>
+                <select id="jobLimit">
+                    <option value="5">5 jobs</option>
+                    <option value="10" selected>10 jobs</option>
+                    <option value="20">20 jobs</option>
+                    <option value="50">50 jobs</option>
+                </select>
+            </div>
+            
+            <div class="quick-searches">
+                <button class="quick-search-btn" onclick="quickSearch('data engineer')">Data Engineer</button>
+                <button class="quick-search-btn" onclick="quickSearch('MLOps engineer')">MLOps Engineer</button>
+                <button class="quick-search-btn" onclick="quickSearch('cloud engineer')">Cloud Engineer</button>
+                <button class="quick-search-btn" onclick="quickSearch('DevOps engineer')">DevOps Engineer</button>
+                <button class="quick-search-btn" onclick="quickSearch('machine learning engineer')">ML Engineer</button>
+            </div>
+            
+            <button onclick="searchJobs()">🔍 Search Jobs</button>
+            <button onclick="testConnection()">🏥 Test Connection</button>
+            <button onclick="clearResults()">🧹 Clear Results</button>
+        </div>
+
+        <div id="status"></div>
+        <div id="results" class="results"></div>
+    </div>
+
+    <script>
+        const API_BASE = 'https://job-agent-frontend-production.up.railway.app';
+
+        function showStatus(message, type = 'info') {
+            const statusDiv = document.getElementById('status');
+            const className = type === 'error' ? 'error' : type === 'success' ? 'success' : 'loading';
+            statusDiv.innerHTML = `<div class="${className}">${message}</div>`;
+        }
+
+        function clearStatus() {
+            document.getElementById('status').innerHTML = '';
+        }
+
+        async function testConnection() {
+            showStatus('Testing connection to your job agent...', 'info');
+            try {
+                const response = await fetch(`${API_BASE}/ping`);
+                const result = await response.text();
+                
+                if (result === 'pong') {
+                    showStatus('✅ Connection successful! Your job agent is online and ready.', 'success');
+                } else {
+                    showStatus('⚠️ Unexpected response from agent: ' + result, 'error');
+                }
+            } catch (error) {
+                showStatus('❌ Connection failed: ' + error.message, 'error');
+            }
+        }
+
+        function quickSearch(query) {
+            document.getElementById('searchQuery').value = query;
+            searchJobs();
+        }
+
+        async function searchJobs() {
+            const query = document.getElementById('searchQuery').value.trim();
+            const limit = parseInt(document.getElementById('jobLimit').value);
+            
+            if (!query) {
+                showStatus('Please enter a search query', 'error');
+                return;
+            }
+
+            showStatus(`Searching for ${limit} ${query} jobs...`, 'info');
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/search`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        query: query,
+                        limit: limit
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                
+                if (data.jobs && data.jobs.length > 0) {
+                    displayJobs(data.jobs);
+                    showStatus(`✅ Found ${data.jobs.length} jobs for "${query}"`, 'success');
+                } else {
+                    showStatus(`No jobs found for "${query}". Try a different search term.`, 'error');
+                    clearResults();
+                }
+            } catch (error) {
+                showStatus('❌ Search failed: ' + error.message, 'error');
+                clearResults();
+            }
+        }
+
+        function displayJobs(jobs) {
+            const resultsDiv = document.getElementById('results');
+            
+            let html = `<h2>Found ${jobs.length} Jobs</h2>`;
+            
+            jobs.forEach((job, index) => {
+                // Clean up the description by removing HTML tags and limiting length
+                let description = job.description.replace(/<[^>]*>/g, '').trim();
+                if (description.length > 500) {
+                    description = description.substring(0, 500) + '...';
+                }
+                
+                html += `
+                    <div class="job-card">
+                        <div class="relevance-score">Score: ${job.relevance_score}</div>
+                        <div class="job-title">${job.title}</div>
+                        <div class="job-company">🏢 ${job.company}</div>
+                        <div class="job-location">📍 ${job.location}</div>
+                        <div class="job-description">${description}</div>
+                        <div class="job-url">
+                            <a href="${job.url}" target="_blank">🔗 View Full Job Details</a>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            resultsDiv.innerHTML = html;
+        }
+
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+            clearStatus();
+        }
+
+        // Test connection when page loads
+        window.onload = function() {
+            testConnection();
+        };
+    </script>
+</body>
+</html>
